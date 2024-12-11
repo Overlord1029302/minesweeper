@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minesweeper</title>
+<style>
+    body {
+        background-color: #263238;
+        color: #ddd;
+        font-family: courier, monospace;
+        display: grid;
+        align-content: center;
+        justify-content: center;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    h1 {
+        font-size: 16pt;
+        font-weight: normal;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    #grid {
+        margin: auto;
+        border-collapse: collapse;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    #grid tr td {
+        border: 1px solid #fff;
+        background-color: #999;
+        width: 30px;
+        height: 30px;
+        text-align: center;
+        vertical-align: middle;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    #grid tr td.active {
+        background-color: #333;
+        color: #fff;
+    }
+
+    #grid tr td.mine {
+        background-color: #d84315;
+        color: #fff;
+        animation: shake 0.3s ease;
+    }
+
+    #grid tr td.flag {
+        background-color: #4caf50;
+        color: #fff;
+        font-weight: bold;
+    }
+
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+
+    button {
+        margin: 12px 0;
+        padding: 8px 16px;
+        border: none;
+        outline: none;
+        cursor: pointer;
+        background-color: #4caf50;
+        color: #fff;
+        font-size: 14px;
+        border-radius: 4px;
+        transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+        background-color: #388e3c;
+    }
+</style>
+</head>
+<body>
+<h1>Minesweeper Game</h1>
+<table id="grid"></table>
+<button onclick="restartGame()">Restart Game</button>
+<script>
+    const grid = document.getElementById("grid");
+    let lockGame = false;
+    const testMode = false;
+
+    generateGrid();
+
+    function generateGrid() {
+        lockGame = false;
+        grid.innerHTML = "";
+        for (let i = 0; i < 10; i++) {
+            const row = grid.insertRow(i);
+            for (let j = 0; j < 10; j++) {
+                const cell = row.insertCell(j);
+                cell.onclick = function () { init(this); };
+                cell.oncontextmenu = function (e) {
+                    e.preventDefault();
+                    toggleFlag(this);
+                };
+                const mine = document.createAttribute("mine");
+                mine.value = "false";
+                cell.setAttributeNode(mine);
+            }
+        }
+        generateMines();
+    }
+
+    function generateMines() {
+        for (let i = 0; i < 20; i++) {
+            const row = Math.floor(Math.random() * 10);
+            const col = Math.floor(Math.random() * 10);
+            const cell = grid.rows[row].cells[col];
+            if (cell.getAttribute("mine") === "true") {
+                i--;
+                continue;
+            }
+            cell.setAttribute("mine", "true");
+            if (testMode) {
+                cell.innerHTML = "X";
+            }
+        }
+    }
+
+    function revealMines() {
+        for (let i = 0; i < 10; i++) {
+            for (let j = 0; j < 10; j++) {
+                const cell = grid.rows[i].cells[j];
+                if (cell.getAttribute("mine") === "true") {
+                    cell.className = "mine";
+                }
+            }
+        }
+    }
+
+    function checkGameComplete() {
+        let gameComplete = true;
+        for (let i = 0; i < 10; i++) {
+            for (let j = 0; j < 10; j++) {
+                const cell = grid.rows[i].cells[j];
+                if (cell.getAttribute("mine") === "false" && cell.innerHTML === "") {
+                    gameComplete = false;
+                }
+            }
+        }
+        if (gameComplete) {
+            alert("You Found All Mines!");
+            revealMines();
+        }
+    }
+
+    function init(cell) {
+        if (lockGame || cell.classList.contains("flag")) {
+            return;
+        }
+        if (cell.getAttribute("mine") === "true") {
+            revealMines();
+            lockGame = true;
+            setTimeout(() => alert("Game Over!"), 100);
+        } else {
+            cell.className = "active";
+            let mineCount = 0;
+            const cellRow = cell.parentNode.rowIndex;
+            const cellCol = cell.cellIndex;
+            for (let i = Math.max(cellRow - 1, 0); i <= Math.min(cellRow + 1, 9); i++) {
+                for (let j = Math.max(cellCol - 1, 0); j <= Math.min(cellCol + 1, 9); j++) {
+                    if (grid.rows[i].cells[j].getAttribute("mine") === "true") {
+                        mineCount++;
+                    }
+                }
+            }
+            cell.innerHTML = mineCount;
+            if (mineCount === 0) {
+                for (let i = Math.max(cellRow - 1, 0); i <= Math.min(cellRow + 1, 9); i++) {
+                    for (let j = Math.max(cellCol - 1, 0); j <= Math.min(cellCol + 1, 9); j++) {
+                        if (grid.rows[i].cells[j].innerHTML === "") {
+                            init(grid.rows[i].cells[j]);
+                        }
+                    }
+                }
+            }
+            checkGameComplete();
+        }
+    }
+
+    function toggleFlag(cell) {
+        if (lockGame || cell.classList.contains("active")) {
+            return;
+        }
+        if (cell.classList.contains("flag")) {
+            cell.classList.remove("flag");
+            cell.innerHTML = "";
+        } else {
+            cell.classList.add("flag");
+            cell.innerHTML = "F";
+        }
+    }
+
+    function restartGame() {
+        generateGrid();
+    }
+</script>
+</body>
+</html>
